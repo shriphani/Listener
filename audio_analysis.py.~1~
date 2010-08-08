@@ -1,0 +1,230 @@
+#!/usr/bin/env python
+#Author: Shriphani Palakodety
+#Tool to aid those with noise cancellation headphones
+
+import pyaudio
+import wave
+import sys
+import struct
+import numpy
+import time
+from operator import mul
+import math
+import cmath
+from decimal import Decimal
+
+## These values were obtained by the R & D conducted by the authors of the paper
+
+P_E_T = 40 #primary energy threshold
+P_F_T = 185 #primary frequency threshold
+P_SFM_T = 5 #primary spectral flatness measure
+
+skype_on_call = False
+
+def record():
+    '''Records Input From Microphone Using PyAudio'''
+    duration = 1 #record for 1 second. Pretty long duration don't you think
+    outfile = "analysis.wav"
+    
+    p = pyaudio.PyAudio()
+    
+    inStream = p.open(format=pyaudio.paInt16, channels=1, rate=44100,input=True, frames_per_buffer=1024)
+
+    out = []
+    upper_lim = 44100 / 1024 * duration #upper limit of the range we record to. 44100 / 1024 sized chunk * 5 seconds
+    
+    for i in xrange(0, upper_lim):
+        data = inStream.read(1024)
+        out.append(data)
+    
+    #now the writing section where we write to file
+    data = ''.join(out)
+    outFile = wave.open(outfile, "wb")
+    outFile.setnchannels(1)
+    outFile.setsampwidth(p.get_sample_size(pyaudio.paInt16))
+    outFile.setframerate(44100)
+    outFile.writeframes(data)
+    outFile.close()
+    analyze()
+
+def analyze():
+	if skype_on_call:
+		#When a skype call is in session, speech is guaranteed
+		print "\nSkype Call In Progress\nListener On Hold"
+		return
+	
+	# An implementation of the VAD algorithm described by Moattar and Homayounpour
+	
+	# The algorithm is described in comments - this is not my IP.
+
+	#start with 10 ms frames
+	#Since our recording is guaranteed to be 441 KHz, we read in 441 samples at a time
+	#So 100 sets of 441 samples each
+
+	samples = wave.open("analysis.wav", "rb") #samples is the fp to our wav file
+	energies = []
+
+	frequencies = []
+
+	SFMs = []
+	
+	min_e = 0
+	min_f = 0
+	min_SF = 0
+
+	thresh_e = 0
+	thresh_f = 0
+	thresh_SF = 0
+
+	decisions = []
+
+	for i in xrange(100):
+		values = samples.readframes(441)
+		results = struct.unpack("%dh"%(441), values)
+		#results = [x**2 for x in results]
+		
+		#energy for a discrete signal is just sum of samples  squared
+
+		set_energy = 0
+		
+		for sample in results:
+			set_energy += sample ** 2
+		
+		energies.append(set_energy)
+		#use DFT to go get this signal in frequency domain
+
+		freq_domain = numpy.fft.rfft(results)
+		
+		print freq_domain	
+		#Once we have the real and imaginary parts, we convert to polar form just to get the magnitudes
+
+		freq_domain = [ abs(x) for x in freq_domain ]
+
+		freq_domain[0] /= len(freq_domain)
+		freq_domain[-1] /= len(freq_domain)
+
+		for i in xrange(1, len(freq_domain)):
+			freq_domain[i] /= len(freq_domain) / 2
+
+		frequencies.append(max(freq_domain))
+
+		#print len(results)
+		
+		print freq_domain
+
+		print len(freq_domain)
+
+		geometric_mean = Decimal(str( reduce(mul, freq_domain) ))  **  Decimal(str(1.0/len(freq_domain)))
+		#print reduce(mul, freq_domain)	
+		print geometric_mean
+
+		arithmetic_mean = Decimal(str(sum(freq_domain))) / Decimal(str(len(freq_domain)))
+		SFM = 0	
+		try:
+			SFM = geometric_mean / arithmetic_mean
+			print SFM
+		except OverflowError:
+			pass 
+
+		SFMs.append(SFM)
+
+		
+		#now set the minimum values. This is done assuming the first 30
+		#sample sets are just silence + noise
+		min_e = min(energies[0:31])
+		min_f = min(frequencies[0:31])
+		min_SF = min(SFMs[0:31])
+
+		thresh_e = P_E_T * log(min_e)
+		thresh_f = P_F_T
+		thresh_SF = P_SFM_T
+	
+		counter = 0
+
+		for i in xrange(100):
+			if (energies[i] - min_e) >= thresh_e:
+				counter += 1
+			if frequencies[i] - min_f >= thresh_f:
+				counter += 1
+			if SFMs[i] - min(SFMs) >= thresh_SF:
+				counter += 1
+		
+		if counter > 1:
+			decisions.append(1) #mark it as speech
+			
+		else:
+			#if the current sample set is marked silence, we need to update the minimum energy value
+			decisions.append(0)
+			
+			min_e = ( ( decisions.count(0) * min_e ) + set_energy ) / (decisions.count(0) + 1)
+			thresh_e = P_E_T * math.log(min_e)
+	
+	#once the frames have been analyzed, the real analysis of the analysis begins
+
+	#I slightly modded the final decision on the sample, decision is speech if:
+	# 1. majority decisions are speech
+	# 2. speech at least occurs in 5 successive frames
+
+	if decisions.count(1) > decisions.count(0):
+		#now its time to perform a check for the run
+		final_dec = false
+		prev = 0
+		cnt = 0
+		for i in decisions:
+			if cnt > 5:
+				print "Speech Detected\n"
+				return
+			else:
+				if i == 1:
+					cnt += 1
+				else:
+					cnt = 0
+
+if __name__ == "__main__":
+	
+	f = open("skype_Status", "r")
+	for new_line in f:
+    		if new_line == "PROGRESS":
+    			skype_on_call = True
+	
+	if skype_on_call:
+		analyze()
+	else:
+		record()
+
+
+####################
+# To Be Deprecated #
+####################
+
+#def analyze():
+#    if skype_on_call:
+#    	print "\n"
+#    	print "Skype Call In Progress"
+#	print "Listener On Hold"
+#	return
+#    inFile = wave.open("analysis.wav", "rb") #open a wav file in read mode
+#    sample_rate = inFile.getframerate()
+#    total_samples = inFile.getnframes()
+#    fftLength = 128
+#    fft_num = (total_samples/fftLength) -2
+#    vals = inFile.readframes(2000)
+#    results = struct.unpack("%dh"%(2000), vals)
+#    results = [x**2 for x in results]
+#    intensity = 20 * numpy.log10(numpy.sqrt(sum(results)/2000))
+#    if (intensity > 44):
+#    	print "\n\n"
+#        print "Someone might be calling you"
+#        curtime = time.localtime()
+#        print "Current Time: %d:%d:%d"%(curtime[3], curtime[4], curtime[5])
+#        print "Intensity: "+str(intensity) + " dB"
+#    else:
+#    	print "\n\n\n\n"
+#    	print "No disturbance in the background"
+#    inFile.close()
+#
+#if skype_on_call:
+#	analyze()
+#else:
+#	record()
+#
