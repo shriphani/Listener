@@ -2,29 +2,35 @@
 #Author: Shriphani Palakodety
 #Tool to aid those with noise cancellation headphones
 
+#import the required modules
 import pyaudio
 import wave
 import sys
 import struct
 import numpy
 import time
-import Skype4Py
+import SkypeCallChecker
 
+#import Skype4Py move Skype specific part of code to new class
+
+#variable that checks if Growl is installed. This is used for notifications.
 Growl_exists = True
 
+#try to import growl
 try:
 	import Growl
+	
 except ImportError:
-	print "No Growl"
+	print "Growl is not installed.\n I will dump output in /var/tmp/audio.log\n"
 	Growl_exists = False
-	pass
 
 skype_on_call = False
 notifier = 0
+
+#obtain a GrowlNotifier
 if Growl_exists:
 	notifier = Growl.GrowlNotifier('Listener',  ['Attention', 'test'])
-	#notifier.applicationName = 'Listener'
-    	notifier.register()
+	notifier.register()
 
 def record():
     '''Records Input From Microphone Using PyAudio'''
@@ -131,31 +137,21 @@ def analyze():
     inFile.close()
 
 if __name__ == "__main__":
-#    f = open("skype_Status", "r")
-#    for new_line in f:
-#	if new_line == "PROGRESS":
-#            skype_on_call = True
-#
-#    if skype_on_call:
-#	analyze()
-#    else:
-#	record()
-	skype = Skype4Py.Skype()
+	skypeCallChecker = SkypeCallChecker.SkypeCallChecker()
 	while True:
-		try:
-			if skype.Client.IsRunning:
-				skype.Attach()
-				#while True:
-				while skype.ActiveCalls.Count:
-					print "Skype On"
-					time.sleep(2)
-				record()
-				time.sleep(2)
-		except RuntimeError:
-			print "here"
+		if skypeCallChecker.__checkCallStatus__():
+			#print "Ma ki kir kiri\n"
+			#This essentially means that a call is taking place
+			#Right now Skype4Py isn't working as intended and I
+			#cannot fix it.
+
+			#Make the app sleep for 20 seconds
+			time.sleep(20)
+			
+		else:   #Either Skype4Py is broken or there isn't a call
 			record()
 			time.sleep(2)
-	#while True:
-	#	record()
-	#	time.sleep(2)
+		
+			
+
 
