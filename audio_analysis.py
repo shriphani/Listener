@@ -68,22 +68,16 @@ def record():
 
 
 def analyze():
-    if skype_on_call:  #skype is in use currently
-    	print "\n"
-    	print "Skype Call In Progress"
-	print "Listener On Hold"
-	return
-    else:
-	#run a VAD algorithm now
-	speech =  VAD.Moattar_Homayounpour_VAD("analysis.wav", 3)
-	#speech = VAD.Milanovic_Lukac_Domazetovic_VAD("analysis.wav")
-	if speech:
-	    if Growl_exists:
-		notifier.notify('Attention','Listener', 'Speech Detected Nearby')
-	    else:
-	        print "Speech Detected Nearby!\nSomeone might be calling you"
+    #run a VAD algorithm now
+    speech =  VAD.Moattar_Homayounpour_VAD("analysis.wav", 3)
+    #speech = VAD.Milanovic_Lukac_Domazetovic_VAD("analysis.wav")
+    if speech:
+        if Growl_exists:
+	    notifier.notify('Attention','Listener', 'Speech Detected Nearby')
 	else:
-	    print "Last call detected at " + time.strftime("%H:%M:%S on %b-%d", time.gmtime())
+	    print "Speech Detected Nearby!\nSomeone might be calling you"
+    else:
+        print "Last call detected at " + time.strftime("%H:%M:%S on %b-%d", time.gmtime())
 	
 	
     
@@ -96,6 +90,9 @@ if __name__ == "__main__":
 			#This essentially means that a call is taking place
 			#Right now Skype4Py isn't working as intended and I
 			#cannot fix it.
+			print "\n"
+			print "Skype Call In Progress"
+			print "Listener On Hold"
 
 			#Make the app sleep for 20 seconds
 			time.sleep(20)
