@@ -258,10 +258,13 @@ def locateInArray(list1, list2):
         if list1[x] == list2[0]:
             counter = 0
             for y in xrange(len(list2)):
-                if list1[x+y] != list2[y]:
-                    break
-                else:
-                    counter += 1
+                try:
+                    if list1[x+y] != list2[y]:
+                        break
+                    else:
+                        counter += 1
+                except IndexError:
+                    return -1
             if counter == len(list2):
                 return x
     return -1
