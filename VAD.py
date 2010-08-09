@@ -233,7 +233,7 @@ def Moattar_Homayounpour_VAD(wave_file, duration):
 
     inFile.close()
     
-    if locateInArray(frame_voiced, [1, 1, 1, 1, 1]) >= 0 and intensity > 40:
+    if locateInArray(frame_voiced, [1, 1, 1, 1, 1]) >= 0 and intensity > 50:
         return True
     return False
         
