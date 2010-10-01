@@ -1,0 +1,7 @@
+Listener can be used to listen to the surroundings and alert the user of the computer if speech / loud noises are detected.
+
+This application contains implementations of two voice-activity-detection algorithms and provides notifications using Growl on computers using Mac OS X.
+
+On machines without Growl installed, Listener writes human-readable output to /var/tmp/audio.log which can be used by tools like Geektool. 
+
+For more information visit: http://shriphani.com/blog/listener
