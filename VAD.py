@@ -16,6 +16,7 @@ import wave
 import struct
 
 
+
 def Milanovic_Lukac_Domazetovic_VAD(filename):
     '''Implements a simple VAD algorithm by
        Milanovic, Lukac, Domazetovic'''
@@ -70,7 +71,7 @@ def Milanovic_Lukac_Domazetovic_VAD(filename):
     final_num = 0
     for val in decision:
 	if active_counter >= 18:
-	    print "Speech!"
+        #print "Speech!"
 	    final_num += 1
 	    active_counter = 0
 	if val == 1:
@@ -90,7 +91,7 @@ def Milanovic_Lukac_Domazetovic_VAD(filename):
     return False
 
 
-def Moattar_Homayounpour_VAD(wave_file, duration):
+def Moattar_Homayounpour_VAD(wave_file, duration, average_intensity, instances):
     '''A simple VAD algorithm by Moattar and Homayounpour'''
     inFile = wave.open("analysis.wav", "rb")
 
@@ -138,7 +139,7 @@ def Moattar_Homayounpour_VAD(wave_file, duration):
 
     for frame_index in xrange(num_frames):
 
-        #print frame_index
+        print frame_index
         #gather values for the frames.
         frame = results[frame_index * samples_per_frame : (frame_index+1) * samples_per_frame]
         #frame = [abs(x) for x in frame]
@@ -181,7 +182,7 @@ def Moattar_Homayounpour_VAD(wave_file, duration):
         try:
             frame_SFM = 10 * log10(geometric_mean(frame) / arithmetic_mean(frame))
         except ZeroDivisionError:
-            return False
+            return (False, average_intensity)
 
 
         #now, append these attributes to the frame attribute arrays created previously
@@ -232,14 +233,15 @@ def Moattar_Homayounpour_VAD(wave_file, duration):
     #at least 5 consecutive frames are needed for speech.
 
     inFile.close()
-    
-    if locateInArray(frame_voiced, [1, 1, 1, 1, 1]) >= 0 and intensity > 50:
-        return True
-    return False
-        
 
-        
-                
+    instances += 1  #a new instance has been processed
+    old_average_intensity = average_intensity   
+    average_intensity = ((old_average_intensity * (instances-1)) + intensity) / float(instances)  #update average intensity
+
+    if locateInArray(frame_voiced, [1, 1, 1, 1, 1]) >= 0 and intensity > old_average_intensity:
+        return (True, average_intensity)
+
+    return (False, average_intensity)
         
 def geometric_mean(frame):
     prod = 1.0
