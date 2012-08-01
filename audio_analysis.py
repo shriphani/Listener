@@ -2,6 +2,7 @@
 #Author: Shriphani Palakodety
 #Environment monitoring for the hearing impaired.
 
+import logging
 import pyaudio
 import datetime
 import wave
@@ -9,9 +10,9 @@ import sys
 import numpy
 import struct
 import os
+from gntp import notifier
 
 from VAD import VAD
-
 
 # VAD constants
 INSTANCES_VAD_IS_RUN = 0
@@ -33,6 +34,17 @@ LAST_NOTIFICATION_TIME = None
 #logging constants
 LOG_FILE_NAME = 'decisions.log'
 LOG_FILE_FD = open(LOG_FILE_NAME, 'w')
+logging.basicConfig(level=logging.ERROR) # this guy exists because Growl is angry about something
+
+#notifications using growl
+GROWL = notifier.GrowlNotifier(
+    applicationName = "Listener",
+    notifications = ["Speech"],
+    defaultNotifications = ["Speech"]
+)
+
+GROWL.register()
+
 
 def record(duration):
     '''Records Input From Microphone Using PyAudio'''
@@ -74,7 +86,14 @@ def analyze():
     INSTANCES_VAD_IS_RUN += 1
 
     if notify_or_not:
-        dump_to_log(datetime.datetime.now())
+        notify_time = datetime.datetime.now()
+        GROWL.notify(
+            noteType = "Speech",
+            title = "Listener",
+            description = "Speech Detected at %d:%d:%d" % (notify_time.hour, notify_time.minute, notify_time.second),
+            sticky = False,
+            priority = 1,
+        )
 
 def dump_to_log(time):
     '''The notifications module expects information of type <str:Notification> type per line'''

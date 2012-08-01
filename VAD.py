@@ -149,10 +149,6 @@ class VAD(object):
             frame_max_frequencies.append(dominant_freq)
             frame_SFMs.append(frame_SFM)
 
-            print frame_energies
-            print frame_max_frequencies
-            print frame_SFMs
-
             #the first 30 frames are used to set min-energy, min-frequency and min-SFM
             if not thirty_frame_mark and not i:
                 min_energy = frame_energy
@@ -165,7 +161,6 @@ class VAD(object):
                 min_sfm = min(frame_SFM, min_sfm)
 
             #once we compute the min values, we compute the thresholds for each of the frame attributes
-            print min_energy
             energy_thresh = energy_prim_thresh * log10(min_energy)
             dominant_freq_thresh = freq_prim_thresh
             sfm_thresh = sfm_prim_thresh
