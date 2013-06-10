@@ -73,11 +73,7 @@ def get_sfm(frequencies):
     return 10 * log10(geometric_mean(frequencies) / arithmetic_mean(frequencies))
 
 def geometric_mean(frame):
-    prod = 1.0
-    for value in frame:
-        prod *= value
-
-    return prod ** (1.0/len(frame))
+    return 10 ** (sum([log10(x) for x in frame]) / float(len(frame)))
 
 def arithmetic_mean(frame):
     return float(sum(frame)) / float(len(frame))
